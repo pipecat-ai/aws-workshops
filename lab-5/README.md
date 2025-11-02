@@ -1,16 +1,16 @@
-# Pipecat voice agent with Deepgram, AWS Bedrock, AWS Strands, and pg_vector
+# Pipecat voice agent with Cartesia speech models, Amazon Bedrock, Strands, and pgvector
 
-This is the agent code used in the AWS Workshop [Building intelligent voice AI agents with Amazon Nova Sonic, Amazon Bedrock and Pipecat](https://catalog.workshops.aws/voice-ai-agents/en-US). Follow the instructions in that workshop to configure an AWS environment to use with this code.
+This is the agent code used in Lab 5 of AWS Workshop [Building intelligent voice AI agents with Amazon Nova Sonic, Amazon Bedrock and Pipecat](https://catalog.workshops.aws/voice-ai-agents/en-US/module5). This lab uses Cartesia for TTS and AWS Transcribe for STT. Follow the instructions in that workshop to configure an AWS environment to use with this code.
 
 ## Understanding the Botfile
 
 To learn more about the architecture of a Pipecat botfile, you can read through the [Pipecat Overview](https://docs.pipecat.ai/guides/learn/overview). The rest of this guide will use some basic Pipecat terminology that's explained in those docs.
 
-Let's build the `agent.py` file that contains your agent.
+Let's build the `cartesia_bedrock_voice_agent_strands.py` file that contains your agent.
 
 ### Starting the botfile
 
-You'll need these imports at the top of `agent.py`. You can add them now, or refer back to this list as you add other code to the file.
+You'll need these imports at the top of `cartesia_bedrock_voice_agent_strands.py`. You can add them now, or refer back to this list as you add other code to the file.
 
 ```python
 import argparse
@@ -36,8 +36,7 @@ from pipecat.services.aws.llm import AWSBedrockLLMService
 from pipecat.services.aws.stt import AWSTranscribeSTTService
 from pipecat.services.aws.tts import AWSPollyTTSService
 from pipecat.services.aws_nova_sonic import AWSNovaSonicLLMService
-from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
-from pipecat.services.deepgram.tts import DeepgramTTSService
+from pipecat.services.cartesia import CartesiaTTSService
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
@@ -67,7 +66,7 @@ If you're using git, make sure to ignore that file in your `.gitignore` file:
 .env
 ```
 
-Back in your `agent.py` file, we'll create a function called `run_bot`. This function contains the core logic of your bot. We'll use some other functions later in the file to run this function.
+Back in your `cartesia_bedrock_voice_agent_strands.py` file, we'll create a function called `run_bot`. This function contains the core logic of your bot. We'll use some other functions later in the file to run this function.
 
 `run_bot` accepts two parameters: 
 
@@ -119,18 +118,14 @@ If you try to run this botfile right now, you'd get an error, because none of th
     #just below logger.info(f"Starting Bedrock Knowledge Base Voice Agent with Strands")
     strands_agent = StrandsAgent()
 
-    stt = DeepgramSTTService(
-        api_key=os.getenv("DEEPGRAM_API_KEY"),
-        live_options=LiveOptions(
-            model="nova-3-general", language=Language.EN, smart_format=True
-        ),
+    stt = AWSTranscribeSTTService(
+        aws_region="us-east-1",
+        language_code="en-US",
     )
 
-    tts = DeepgramTTSService(
-        api_key=os.getenv("DEEPGRAM_API_KEY"),
-        voice="aura-2-arcas-en",
-        sample_rate=24000,
-        encoding="linear16",
+    tts = CartesiaTTSService(
+        api_key=os.getenv("CARTESIA_API_KEY"),
+        voice_id="79a125e8-cd45-4c13-8a67-188112f4dd22",  # British Lady voice
     )
 
     llm = AWSBedrockLLMService(
@@ -382,7 +377,6 @@ class BedrockKnowledgeBaseClient:
 
 You can refer to the Amazon Knowledge Base documentation to learn more about this code.
 
-
 ### Finishing the Botfile
 
 That takes care of everything except for the `transport` object in the pipeline. We'll come back to that later.
@@ -467,9 +461,11 @@ if __name__ == "__main__":
     main()
 ```
 
-With this code at the bottom of the botfile, we can run `python agent.py` from the command line. The Pipecat built-in bot runner `main()` function will call the `bot()` function with some pre-configured arguments in `runner_args`, which will in turn call the `run_bot` function to actually run the bot.
+With this code at the bottom of the botfile, we can run `python cartesia_bedrock_voice_agent_strands.py` from the command line. The Pipecat built-in bot runner `main()` function will call the `bot()` function with some pre-configured arguments in `runner_args`, which will in turn call the `run_bot` function to actually run the bot.
 
 
-## Deploying to Pipecat Cloud
+## Deploying to Pipecat Cloud on AWS
 
-You can deploy this bot to Pipecat Cloud and get production-ready infrastructure in about 5 minutes. Rename your file from `agent.py` to `bot.py`, then follow the instructions from [the Pipecat Cloud Quickstart](https://github.com/pipecat-ai/pipecat-quickstart?tab=readme-ov-file#step-2-deploy-to-production-5-min)!
+You can deploy this bot to Pipecat Cloud and get production-ready infrastructure in about 5 minutes. Rename your file from `cartesia_bedrock_voice_agent_strands.py` to `bot.py`, then follow the instructions from [the Pipecat Cloud Quickstart](https://github.com/pipecat-ai/pipecat-quickstart?tab=readme-ov-file#step-2-deploy-to-production-5-min)!
+
+Pipecat Cloud is available [on AWS Marketplace](https://aws.amazon.com/marketplace/pp/prodview-2uq3wv62gyldg). Contact your AWS account team for alternate deployment options on Amazon EC2 or Amazon EKS.

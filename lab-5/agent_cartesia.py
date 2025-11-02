@@ -9,7 +9,6 @@ from loguru import logger
 from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
@@ -18,11 +17,9 @@ from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.aws.llm import AWSBedrockLLMService
-from pipecat.services.aws.stt import AWSTranscribeSTTService
-from pipecat.services.aws.tts import AWSPollyTTSService
 from pipecat.services.aws_nova_sonic import AWSNovaSonicLLMService
-from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
-from pipecat.services.deepgram.tts import DeepgramTTSService
+from pipecat.services.cartesia.tts import CartesiaTTSService
+from pipecat.services.cartesia.stt import CartesiaSTTService, CartesiaLiveOptions as LiveOptions
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
@@ -199,18 +196,29 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     strands_agent = StrandsAgent()
 
-    stt = DeepgramSTTService(
-        api_key=os.getenv("DEEPGRAM_API_KEY"),
+    stt = CartesiaSTTService(
+        api_key=os.getenv("CARTESIA_API_KEY"),
         live_options=LiveOptions(
-            model="nova-3-general", language=Language.EN, smart_format=True
+            model="ink-whisper", language=Language.EN, smart_format=True
         ),
     )
 
-    tts = DeepgramTTSService(
-        api_key=os.getenv("DEEPGRAM_API_KEY"),
-        voice="aura-2-arcas-en",
-        sample_rate=24000,
-        encoding="linear16",
+    # Try different voices by uncommenting a voice_id below:
+    # voice_id="41f3c367-e0a8-4a85-89e0-c27bae9c9b6d"  # Australian Customer Support Man (current)
+    # voice_id="694f9389-aac1-45b6-b726-9d9369183238"  # British Customer Support Woman
+    # voice_id="79a125e8-cd45-4c13-8a67-188112f4dd22"  # American Professional Woman
+    # voice_id="a0e99841-438c-4a64-b679-ae501e7d6091"  # Conversational American Man
+    # voice_id="95856005-0332-41b0-935f-352e296aa0df"  # Friendly American Woman
+    # voice_id="fb26447f-308b-471e-8b00-8e9f04284eb5"  # Calm British Man
+    # voice_id="421b3369-f63f-4b03-8980-37a44df1d4e8"  # Warm Australian Woman
+    # voice_id="726d5ae5-055f-4c3d-8355-d9677de68937"  # Professional Indian Man
+    #
+    # For voice cloning, you can clone any voice using Cartesia's voice cloning feature.
+    # Visit https://play.cartesia.ai to clone voices and get custom voice IDs.
+
+    tts = CartesiaTTSService(
+        api_key=os.getenv("CARTESIA_API_KEY"),
+        voice_id="41f3c367-e0a8-4a85-89e0-c27bae9c9b6d",  # Australian Customer Support Man
     )
 
     llm = AWSBedrockLLMService(
@@ -267,7 +275,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         "- If they say 'claim ID 1234', search for 'claim ID 1234' specifically "
         "For general questions not related to specific claims, you can answer directly without using the search function."
         "For claim estimates, costs, amounts, or any other information, always search for that specific information. "
-        "Keep your responses very brief. Don't add extra information the user didn't ask for. "
+        "Always provide helpful information about claims when found. "
         f"{AWSNovaSonicLLMService.AWAIT_TRIGGER_ASSISTANT_RESPONSE_INSTRUCTION}"
     )
 
@@ -276,7 +284,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             {"role": "system", "content": system_instruction},
             {
                 "role": "user",
-                "content": "Start by saying exactly this: 'Thanks for contacting tri-county insurance. How can I help you?",
+                "content": "Hello! I'm ready to help you find information from the knowledge base.",
             },
         ],
         tools=tools,
