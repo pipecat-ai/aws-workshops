@@ -56,7 +56,6 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         model="amazon.nova-lite-v1:0",
         params=AWSBedrockLLMService.InputParams(
             temperature=0.3,
-            latency="optimized",
             additional_model_request_fields={}
         )
     )
