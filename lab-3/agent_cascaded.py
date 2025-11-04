@@ -112,7 +112,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         # Kick off the conversation
         await task.queue_frames([LLMRunFrame()])
         # Trigger the first assistant response
-        await llm.trigger_assistant_response()
+        # await llm.trigger_assistant_response()
 
     # Handle client disconnection events
     @transport.event_handler("on_client_disconnected")
